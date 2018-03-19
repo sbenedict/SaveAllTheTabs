@@ -67,6 +67,7 @@ namespace SaveAllTheTabs
 
         private const string StorageCollectionPath = "SaveAllTheTabs";
         private const string SavedTabsStoragePropertyFormat = "SavedTabs.{0}";
+        private const int StorageStringMaxLength = 512000;
 
         private SaveAllTheTabsPackage Package { get; }
         private IServiceProvider ServiceProvider => Package;
@@ -416,6 +417,17 @@ namespace SaveAllTheTabs
                         var tabs = store.GetString(StorageCollectionPath, propertyName);
                         return JsonConvert.DeserializeObject<List<DocumentGroup>>(tabs);
                     }
+                    else if (store.PropertyExists(StorageCollectionPath, $"{propertyName}.0"))
+                    {
+                        var n = 0;
+                        var tabs = "";
+                        while (store.PropertyExists(StorageCollectionPath, $"{propertyName}.{n}"))
+                        {
+                            tabs += store.GetString(StorageCollectionPath, $"{propertyName}.{n}");
+                            n += 1;
+                        }
+                        return JsonConvert.DeserializeObject<List<DocumentGroup>>(tabs);
+                    }
                 }
                 catch (Exception ex)
                 {
@@ -450,11 +462,42 @@ namespace SaveAllTheTabs
             if (!groups.Any())
             {
                 store.DeleteProperty(StorageCollectionPath, propertyName);
+                var n = 0;
+                while (store.PropertyExists(StorageCollectionPath, $"{propertyName}.{n}"))
+                {
+                    store.DeleteProperty(StorageCollectionPath, $"{propertyName}.{n}");
+                    n += 1;
+                }
                 return;
             }
 
             var tabs = JsonConvert.SerializeObject(groups);
-            store.SetString(StorageCollectionPath, propertyName, tabs);
+
+            if (tabs.Length < StorageStringMaxLength)
+            {
+                store.SetString(StorageCollectionPath, propertyName, tabs);
+            }
+            else
+            {
+                if (store.PropertyExists(StorageCollectionPath, propertyName))
+                {
+                    store.DeleteProperty(StorageCollectionPath, propertyName);
+                }
+                var n = 0;
+                while (store.PropertyExists(StorageCollectionPath, $"{propertyName}.{n}"))
+                {
+                    store.DeleteProperty(StorageCollectionPath, $"{propertyName}.{n}");
+                    n += 1;
+                }
+                n = 0;
+                while (tabs.Length > StorageStringMaxLength)
+                {
+                    store.SetString(StorageCollectionPath, $"{propertyName}.{n}", tabs.Substring(0, StorageStringMaxLength));
+                    tabs = tabs.Substring(StorageStringMaxLength);
+                    n += 1;
+                }
+                store.SetString(StorageCollectionPath, $"{propertyName}.{n}", tabs);
+            }
         }
 
         public static bool IsStashGroup(string name)
