@@ -64,6 +64,10 @@
                 <Parent guid="guidSavedTabsWindowToolbarCmdSet" id="SavedTabsWindowToolbar" />
             </Group>
 
+            <Group guid="guidSavedTabsWindowToolbarCmdSet" id="SavedTabsWindowToolbarCmdGroup3" priority="0x0800">
+                <Parent guid="guidSavedTabsWindowToolbarCmdSet" id="SavedTabsWindowToolbar" />
+            </Group>
+
             <Group guid="guidSavedTabsWindowContextMenuCmdSet" id="SavedTabsWindowContextMenuCmdGroup" priority="0x0100">
                 <Parent guid="guidSavedTabsWindowContextMenuCmdSet" id="SavedTabsWindowContextMenu"/>
             </Group>
@@ -376,6 +380,29 @@
                     <LocCanonicalName>SaveAllTheTabs.ToolbarDeleteSelected</LocCanonicalName>
                 </Strings>
             </Button>
+
+          <Button guid="guidSavedTabsWindowToolbarCmdSet" id="SavedTabsWindowToolbarExportGroups" priority="0x0100" type="Button">
+            <Parent guid="guidSavedTabsWindowToolbarCmdSet" id="SavedTabsWindowToolbarCmdGroup3" />
+            <CommandFlag>DefaultDisabled</CommandFlag>
+            <Strings>
+              <CommandName>Export groups</CommandName>
+              <ButtonText>Export</ButtonText>
+              <MenuText>Export groups</MenuText>
+              <CanonicalName>SaveAllTheTabs.ToolbarExportGroups</CanonicalName>
+              <LocCanonicalName>SaveAllTheTabs.ToolbarExportGroups</LocCanonicalName>
+            </Strings>
+          </Button>
+
+          <Button guid="guidSavedTabsWindowToolbarCmdSet" id="SavedTabsWindowToolbarImportGroups" priority="0x0200" type="Button">
+            <Parent guid="guidSavedTabsWindowToolbarCmdSet" id="SavedTabsWindowToolbarCmdGroup3" />
+            <Strings>
+              <CommandName>Import groups</CommandName>
+              <ButtonText>Import</ButtonText>
+              <MenuText>Import groups</MenuText>
+              <CanonicalName>SaveAllTheTabs.ToolbarImportGroups</CanonicalName>
+              <LocCanonicalName>SaveAllTheTabs.ToolbarImportGroups</LocCanonicalName>
+            </Strings>
+          </Button>
         </Buttons>
 
         <!--The bitmaps section is used to define the bitmaps that are used for the commands.-->
@@ -479,12 +506,15 @@
             <IDSymbol name="SavedTabsWindowToolbarCmdGroup" value="0x1020" />
             <IDSymbol name="SavedTabsWindowToolbarCmdGroup1" value="0x1040" />
             <IDSymbol name="SavedTabsWindowToolbarCmdGroup2" value="0x1080" />
+            <IDSymbol name="SavedTabsWindowToolbarCmdGroup3" value="0x1100" />
             <IDSymbol name="SavedTabsWindowToolbar" value="0x0100" />
             <IDSymbol name="SavedTabsWindowToolbarSaveToTabs" value="0x0200" />
             <IDSymbol name="SavedTabsWindowToolbarDeleteTabs" value="0x0300" />
             <IDSymbol name="SavedTabsWindowToolbarRestoreTabs" value="0x0400" />
             <IDSymbol name="SavedTabsWindowToolbarOpenTabs" value="0x0500" />
             <IDSymbol name="SavedTabsWindowToolbarCloseTabs" value="0x0600" />
+            <IDSymbol name="SavedTabsWindowToolbarExportGroups" value="0x0700" />
+            <IDSymbol name="SavedTabsWindowToolbarImportGroups" value="0x0800" />
         </GuidSymbol>
 
         <GuidSymbol name="guidSavedTabsWindowContextMenuCmdSet" value="{8734827a-84f9-4bf6-aaa2-f6b076f26395}">

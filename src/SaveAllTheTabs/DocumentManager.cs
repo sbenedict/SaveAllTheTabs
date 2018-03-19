@@ -52,6 +52,9 @@ namespace SaveAllTheTabs
 
         bool HasStashGroup { get; }
 
+        void ExportGroups(string filePath);
+        void ImportGroups(string filePath);
+
         int? FindFreeSlot();
     }
 
@@ -379,6 +382,34 @@ namespace SaveAllTheTabs
 
         public bool HasStashGroup => Groups.FindByName(StashGroupName) != null;
 
+        private class ExportData
+        {
+            public string SolutionName { get; set; }
+            public IList<DocumentGroup> Tabs { get; set; }
+        }
+
+        public void ExportGroups(string filePath)
+        {
+            var export = new ExportData
+            {
+                SolutionName = SolutionName,
+                Tabs = Groups.ToList()
+            };
+            var json = JsonConvert.SerializeObject(export, Formatting.Indented);
+            File.WriteAllText(filePath, json);
+        }
+
+        public void ImportGroups(string filePath)
+        {
+            var json = File.ReadAllText(filePath);
+            var import = JsonConvert.DeserializeObject<ExportData>(json);
+            SaveGroupsForSolution(import.SolutionName, import.Tabs);
+            if (SolutionName == import.SolutionName)
+            {
+                LoadGroups();
+            }
+        }
+
         public int? FindFreeSlot()
         {
             var slotted = Groups.Where(g => g.Slot.HasValue)
@@ -437,10 +468,13 @@ namespace SaveAllTheTabs
             return new List<DocumentGroup>();
         }
 
-        private void SaveGroupsForSolution(IList<DocumentGroup> groups = null)
+        private void SaveGroupsForSolution(string solutionName = null, IList<DocumentGroup> groups = null)
         {
-            var solution = SolutionName;
-            if (string.IsNullOrWhiteSpace(solution))
+            if (solutionName == null)
+            {
+                solutionName = SolutionName;
+            }
+            if (string.IsNullOrWhiteSpace(solutionName))
             {
                 return;
             }
@@ -458,7 +492,7 @@ namespace SaveAllTheTabs
                 store.CreateCollection(StorageCollectionPath);
             }
 
-            var propertyName = String.Format(SavedTabsStoragePropertyFormat, solution);
+            var propertyName = String.Format(SavedTabsStoragePropertyFormat, solutionName);
             if (!groups.Any())
             {
                 store.DeleteProperty(StorageCollectionPath, propertyName);
