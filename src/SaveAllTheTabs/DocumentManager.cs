@@ -385,7 +385,7 @@ namespace SaveAllTheTabs
         private class ExportData
         {
             public string SolutionName { get; set; }
-            public IList<DocumentGroup> Tabs { get; set; }
+            public IList<DocumentGroup> Groups { get; set; }
         }
 
         public void ExportGroups(string filePath)
@@ -393,7 +393,7 @@ namespace SaveAllTheTabs
             var export = new ExportData
             {
                 SolutionName = SolutionName,
-                Tabs = Groups.ToList()
+                Groups = Groups.ToList()
             };
             var json = JsonConvert.SerializeObject(export, Formatting.Indented);
             File.WriteAllText(filePath, json);
@@ -403,7 +403,7 @@ namespace SaveAllTheTabs
         {
             var json = File.ReadAllText(filePath);
             var import = JsonConvert.DeserializeObject<ExportData>(json);
-            SaveGroupsForSolution(import.SolutionName, import.Tabs);
+            SaveGroupsForSolution(import.SolutionName, import.Groups);
             if (SolutionName == import.SolutionName)
             {
                 LoadGroups();
