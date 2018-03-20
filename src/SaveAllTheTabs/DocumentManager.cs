@@ -75,6 +75,8 @@ namespace SaveAllTheTabs
         private SaveAllTheTabsPackage Package { get; }
         private IServiceProvider ServiceProvider => Package;
         private IVsUIShellDocumentWindowMgr DocumentWindowMgr { get; }
+        //public IVsUIShellOpenDocument OpenDocument { get; }
+
         private string SolutionName => Package.Environment.Solution?.FullName;
 
         public ObservableCollection<DocumentGroup> Groups { get; private set; }
@@ -87,6 +89,7 @@ namespace SaveAllTheTabs
             LoadGroups();
 
             DocumentWindowMgr = ServiceProvider.GetService(typeof(IVsUIShellDocumentWindowMgr)) as IVsUIShellDocumentWindowMgr;
+            //OpenDocument = ServiceProvider.GetService(typeof(IVsUIShellOpenDocument)) as IVsUIShellOpenDocument;
         }
 
         private IDisposable _changeSubscription;
@@ -250,17 +253,45 @@ namespace SaveAllTheTabs
                 return;
             }
 
-            using (var stream = new VsOleStream())
+            if (group.Positions != null)
             {
-                stream.Write(group.Positions, 0, group.Positions.Length);
-                stream.Seek(0, SeekOrigin.Begin);
-
-                var hr = DocumentWindowMgr.ReopenDocumentWindows(stream);
-                if (hr != VSConstants.S_OK)
+                using (var stream = new VsOleStream())
                 {
-                    Debug.Assert(false, "ReopenDocumentWindows", String.Empty, hr);
+                    stream.Write(group.Positions, 0, group.Positions.Length);
+                    stream.Seek(0, SeekOrigin.Begin);
+
+                    var hr = DocumentWindowMgr.ReopenDocumentWindows(stream);
+                    if (hr != VSConstants.S_OK)
+                    {
+                        Debug.Assert(false, "ReopenDocumentWindows", String.Empty, hr);
+                    }
                 }
             }
+
+            var openFiles = Package.Environment.GetDocumentFiles();
+            foreach (var file in group.Files)
+            {
+                if (!openFiles.Any(f => string.Compare(f, file, true) == 0))
+                {
+                    OpenFile(file);
+                }
+            }
+        }
+
+        public void OpenFile(string path)
+        {
+            Microsoft.VisualStudio.Shell.VsShellUtilities.OpenDocument(ServiceProvider, path);
+            //var viewId = Guid.Parse(LogicalViewID.Primary);
+            //var hr = OpenDocument.OpenDocumentViaProject(path,
+            //    ref viewId,
+            //    out Microsoft.VisualStudio.OLE.Interop.IServiceProvider ppSP,
+            //    out IVsUIHierarchy ppHier,
+            //    out uint pitemid,
+            //    out IVsWindowFrame ppWindowFrame);
+            //if (hr != VSConstants.S_OK || ppWindowFrame == null)
+            //{
+            //    Debug.Assert(false, "OpenDocumentViaProject", "Path: \"{0}\"\nResult: {1}", path, hr);
+            //}
         }
 
         public void CloseGroup(DocumentGroup group)
