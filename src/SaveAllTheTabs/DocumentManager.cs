@@ -403,6 +403,37 @@ namespace SaveAllTheTabs
         {
             var json = File.ReadAllText(filePath);
             var import = JsonConvert.DeserializeObject<ExportData>(json);
+            if (SolutionName != import.SolutionName)
+            {
+                var window = new ImportGroupsConfirmOverwriteWindow();
+                if (window.ShowDialog() == true)
+                {
+                    var originalSolutionName = import.SolutionName;
+                    var newSolutionName = SolutionName;
+                    var originalSolutionPath = Path.GetDirectoryName(originalSolutionName);
+                    var newSolutionPath = Path.GetDirectoryName(newSolutionName);
+                    foreach (var group in import.Groups)
+                    {
+                        var newFiles = new DocumentFilesHashSet();
+                        foreach (var file in group.Files)
+                        {
+                            if (file.StartsWith(originalSolutionPath, StringComparison.OrdinalIgnoreCase))
+                            {
+                                var fileRelativePath = file.Substring(originalSolutionPath.Length + 1);
+                                newFiles.Add(Path.Combine(newSolutionPath, fileRelativePath));
+                            }
+                            else
+                            {
+                                newFiles.Add(file);
+                            }
+                        }
+                        group.Files = newFiles;
+                        group.Description = String.Join(", ", group.Files.Select(Path.GetFileName));
+                        group.Positions = null;
+                    }
+                    import.SolutionName = newSolutionName;
+                }
+            }
             SaveGroupsForSolution(import.SolutionName, import.Groups);
             if (SolutionName == import.SolutionName)
             {

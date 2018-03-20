@@ -75,6 +75,9 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="Commands\RestoreTabsListCommands.cs" />
+    <Compile Include="ImportGroupsConfirmOverwriteWindow.xaml.cs">
+      <DependentUpon>ImportGroupsConfirmOverwriteWindow.xaml</DependentUpon>
+    </Compile>
     <Compile Include="DocumentGroup.cs" />
     <Compile Include="DocumentManager.cs" />
     <Compile Include="Polyfills\Extensions.cs" />
@@ -250,6 +253,10 @@
     </Content>
   </ItemGroup>
   <ItemGroup>
+    <Page Include="ImportGroupsConfirmOverwriteWindow.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
     <Page Include="SavedTabsToolWindowControl.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
