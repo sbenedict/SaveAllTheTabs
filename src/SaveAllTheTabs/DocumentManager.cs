@@ -416,7 +416,7 @@ namespace SaveAllTheTabs
         private class ExportData
         {
             public string SolutionName { get; set; }
-            public IList<DocumentGroup> Groups { get; set; }
+            public List<DocumentGroup> Groups { get; set; }
         }
 
         public void ExportGroups(string filePath)
@@ -439,30 +439,7 @@ namespace SaveAllTheTabs
                 var window = new ImportGroupsConfirmOverwriteWindow();
                 if (window.ShowDialog() == true)
                 {
-                    var originalSolutionName = import.SolutionName;
-                    var newSolutionName = SolutionName;
-                    var originalSolutionPath = Path.GetDirectoryName(originalSolutionName);
-                    var newSolutionPath = Path.GetDirectoryName(newSolutionName);
-                    foreach (var group in import.Groups)
-                    {
-                        var newFiles = new DocumentFilesHashSet();
-                        foreach (var file in group.Files)
-                        {
-                            if (file.StartsWith(originalSolutionPath, StringComparison.OrdinalIgnoreCase))
-                            {
-                                var fileRelativePath = file.Substring(originalSolutionPath.Length + 1);
-                                newFiles.Add(Path.Combine(newSolutionPath, fileRelativePath));
-                            }
-                            else
-                            {
-                                newFiles.Add(file);
-                            }
-                        }
-                        group.Files = newFiles;
-                        group.Description = String.Join(", ", group.Files.Select(Path.GetFileName));
-                        group.Positions = null;
-                    }
-                    import.SolutionName = newSolutionName;
+                    TranslateSolutionPaths(import, SolutionName);
                 }
             }
             SaveGroupsForSolution(import.SolutionName, import.Groups);
@@ -470,6 +447,33 @@ namespace SaveAllTheTabs
             {
                 LoadGroups();
             }
+        }
+
+        private static void TranslateSolutionPaths(ExportData import, string newSolutionName)
+        {
+            var newSolutionPath = Path.GetDirectoryName(newSolutionName);
+            var originalSolutionName = import.SolutionName;
+            var originalSolutionPath = Path.GetDirectoryName(originalSolutionName);
+            foreach (var group in import.Groups)
+            {
+                var newFiles = new DocumentFilesHashSet();
+                foreach (var file in group.Files)
+                {
+                    if (file.StartsWith(originalSolutionPath, StringComparison.OrdinalIgnoreCase))
+                    {
+                        var fileRelativePath = file.Substring(originalSolutionPath.Length + 1);
+                        newFiles.Add(Path.Combine(newSolutionPath, fileRelativePath));
+                    }
+                    else
+                    {
+                        newFiles.Add(file);
+                    }
+                }
+                group.Files = newFiles;
+                group.Description = String.Join(", ", group.Files.Select(Path.GetFileName));
+                group.Positions = null;
+            }
+            import.SolutionName = newSolutionName;
         }
 
         public int? FindFreeSlot()
@@ -494,38 +498,87 @@ namespace SaveAllTheTabs
             return null;
         }
 
+        private const string SolutionGroupsFileName = "SaveAllTheTabs.json";
+        private static string GetSolutionGroupsFilePath(string solutionName) => (solutionName == null) ? null :
+            Path.Combine(
+                Path.GetDirectoryName(solutionName),
+                ".vs",
+                Path.GetFileNameWithoutExtension(solutionName),
+                SolutionGroupsFileName);
+        private static bool SolutionGroupsFileExists(string solutionName) => File.Exists(GetSolutionGroupsFilePath(solutionName));
+
+        public bool SolutionGroupsSavedInSettingsStore(string solutionName)
+            => SolutionGroupsFileExists(solutionName);
+        public void ToggleSolutionGroupsSavedInSettingsStore(string solutionName)
+        {
+            var filePath = GetSolutionGroupsFilePath(solutionName);
+            if (File.Exists(filePath))
+            {
+                File.Delete(filePath);
+            }
+            else
+            {
+                File.WriteAllText(filePath, "");
+            }
+            SaveGroupsForSolution(solutionName);
+        }
+
         private List<DocumentGroup> LoadGroupsForSolution()
         {
-            var solution = SolutionName;
-            if (!string.IsNullOrWhiteSpace(solution))
+            var solutionName = SolutionName;
+            if (!string.IsNullOrWhiteSpace(solutionName))
             {
                 try
                 {
-                    var settingsMgr = new ShellSettingsManager(ServiceProvider);
-                    var store = settingsMgr.GetReadOnlySettingsStore(SettingsScope.UserSettings);
-
-                    var propertyName = String.Format(SavedTabsStoragePropertyFormat, solution);
-                    if (store.PropertyExists(StorageCollectionPath, propertyName))
+                    if (SolutionGroupsFileExists(solutionName))
                     {
-                        var tabs = store.GetString(StorageCollectionPath, propertyName);
-                        return JsonConvert.DeserializeObject<List<DocumentGroup>>(tabs);
+                        return LoadGroupsFromSolutionFile(solutionName);
                     }
-                    else if (store.PropertyExists(StorageCollectionPath, $"{propertyName}.0"))
-                    {
-                        var n = 0;
-                        var tabs = "";
-                        while (store.PropertyExists(StorageCollectionPath, $"{propertyName}.{n}"))
-                        {
-                            tabs += store.GetString(StorageCollectionPath, $"{propertyName}.{n}");
-                            n += 1;
-                        }
-                        return JsonConvert.DeserializeObject<List<DocumentGroup>>(tabs);
-                    }
+                    return LoadGroupsFromSettingsStore(solutionName);
                 }
                 catch (Exception ex)
                 {
                     Debug.Assert(false, nameof(LoadGroupsForSolution), ex.ToString());
                 }
+            }
+            return new List<DocumentGroup>();
+        }
+
+        private List<DocumentGroup> LoadGroupsFromSolutionFile(string solutionName)
+        {
+            var filePath = GetSolutionGroupsFilePath(solutionName);
+            var json = File.ReadAllText(filePath);
+            if (string.IsNullOrWhiteSpace(json))
+            {
+                return new List<DocumentGroup>();
+            }
+            var import = JsonConvert.DeserializeObject<ExportData>(json);
+            if (solutionName != import.SolutionName)
+                TranslateSolutionPaths(import, solutionName);
+            return import.Groups;
+        }
+
+        private List<DocumentGroup> LoadGroupsFromSettingsStore(string solutionName)
+        {
+            var settingsMgr = new ShellSettingsManager(ServiceProvider);
+            var store = settingsMgr.GetReadOnlySettingsStore(SettingsScope.UserSettings);
+
+            var propertyName = String.Format(SavedTabsStoragePropertyFormat, solutionName);
+            if (store.PropertyExists(StorageCollectionPath, propertyName))
+            {
+                var tabs = store.GetString(StorageCollectionPath, propertyName);
+                return JsonConvert.DeserializeObject<List<DocumentGroup>>(tabs);
+            }
+            else if (store.PropertyExists(StorageCollectionPath, $"{propertyName}.0"))
+            {
+                var n = 0;
+                var tabs = "";
+                while (store.PropertyExists(StorageCollectionPath, $"{propertyName}.{n}"))
+                {
+                    tabs += store.GetString(StorageCollectionPath, $"{propertyName}.{n}");
+                    n += 1;
+                }
+                return JsonConvert.DeserializeObject<List<DocumentGroup>>(tabs);
             }
             return new List<DocumentGroup>();
         }
@@ -545,6 +598,37 @@ namespace SaveAllTheTabs
             {
                 groups = Groups;
             }
+
+
+            if (SolutionGroupsFileExists(solutionName))
+            {
+                SaveGroupsToSolutionFile(solutionName, groups);
+            }
+            else
+            {
+                SaveGroupsToSettingsStore(solutionName, groups);
+            }
+        }
+
+        private void SaveGroupsToSolutionFile(string solutionName, IList<DocumentGroup> groups)
+        {
+            if (string.IsNullOrWhiteSpace(solutionName)) throw new ArgumentException("solutionName is not specified.", nameof(solutionName));
+            if (groups == null) throw new ArgumentNullException(nameof(groups));
+
+            var export = new ExportData
+            {
+                SolutionName = SolutionName,
+                Groups = Groups.ToList()
+            };
+            var json = JsonConvert.SerializeObject(export, Formatting.Indented);
+            var filePath = GetSolutionGroupsFilePath(solutionName);
+            File.WriteAllText(filePath, json);
+        }
+
+        private void SaveGroupsToSettingsStore(string solutionName, IList<DocumentGroup> groups)
+        {
+            if (string.IsNullOrWhiteSpace(solutionName)) throw new ArgumentException("solutionName is not specified.", nameof(solutionName));
+            if (groups == null) throw new ArgumentNullException(nameof(groups));
 
             var settingsMgr = new ShellSettingsManager(ServiceProvider);
             var store = settingsMgr.GetWritableSettingsStore(SettingsScope.UserSettings);
