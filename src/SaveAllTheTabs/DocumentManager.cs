@@ -268,13 +268,34 @@ namespace SaveAllTheTabs
                 }
             }
 
-            var openFiles = Package.Environment.GetDocumentFiles();
-            foreach (var file in group.Files)
+            try
             {
-                if (!openFiles.Any(f => string.Compare(f, file, true) == 0))
+                var missingFiles = new List<string>();
+                var openFiles = Package.Environment.GetDocumentFiles();
+                foreach (var file in group.Files)
                 {
-                    OpenFile(file);
+                    if (File.Exists(file))
+                    {
+                        if (!openFiles.Any(f => string.Compare(f, file, true) == 0))
+                        {
+                            OpenFile(file);
+                        }
+                    }
+                    else
+                    {
+                        missingFiles.Add(file);
+                    }
                 }
+
+                if (missingFiles.Count > 0)
+                {
+                    System.Windows.Forms.MessageBox.Show("The following files could not be found and were not restored:\n\n"
+                        + String.Join("\n", missingFiles), "SaveAllTheTabs");
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.Assert(false, "Windows for the solution were restored, but an error occurred while opening external files.\n\n" + nameof(OpenGroup), ex.ToString());
             }
         }
 

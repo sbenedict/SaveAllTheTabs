@@ -1,6 +1,10 @@
 ---
 ## Release Notes
 
+### 1.1.2
+
+ - Fixed fails to restore files when a file does not exist.
+
 ### 1.1.1
 
  - Added support for files external to the solution
